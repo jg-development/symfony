@@ -15,6 +15,7 @@ use PHPStan\PhpDocParser\Parser\PhpDocParser;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\PropertyAccess\Exception\InvalidTypeException;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\PropertyInfo\Extractor\PhpStanExtractor;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
@@ -284,6 +285,100 @@ class ObjectNormalizerTest extends TestCase
         $obj = $normalizer->denormalize($data, ObjectConstructorDummy::class, 'any');
         $this->assertEquals('foo', $obj->getFoo());
         $this->assertEquals('bar', $obj->bar);
+    }
+
+    public function testConstructorWithObjectDenormalizeForStdClass()
+    {
+        $data = [
+            'foo' => ['bar' => 'baz'],
+            'oof' => 'rab',
+        ];
+
+        $obj = $this->normalizer->denormalize($data, \stdClass::class, 'any');
+
+        $expected = new \stdClass();
+        $expected->foo = ['bar' => 'baz'];
+        $expected->oof = 'rab';
+
+        self::assertEquals($expected, $obj);
+    }
+
+    public function testConstructorWithObjectDenormalizeForExtendingStdClass()
+    {
+        $data = [
+            'foo' => ['bar' => 'baz'],
+            'oof' => 'rab',
+        ];
+
+        $obj = $this->normalizer->denormalize($data, ObjectDummyThatExtendsStdClass::class, 'any');
+
+        $expected = new ObjectDummyThatExtendsStdClass();
+        $expected->foo = ['bar' => 'baz'];
+        $expected->oof = 'rab';
+
+        self::assertEquals($expected, $obj);
+    }
+
+    public function testNormalizeWithObjectFromStdClass()
+    {
+        $propertyAccess = PropertyAccess::createPropertyAccessorBuilder();
+        $propertyAccess->disableExceptionOnInvalidPropertyPath();
+        $propertyAccess->disableExceptionOnInvalidIndex();
+        $this->normalizer = new ObjectNormalizer(null, null, $propertyAccess->getPropertyAccessor(), null, null, null, []);
+
+        $o1 = new ObjectDummyThatExtendsStdClass();
+        $o1->foo = 'f';
+        $o1->bar = 'b';
+
+        $this->assertSame(['foo' => 'f', 'bar' => 'b'], $this->normalizer->normalize($o1));
+
+        $o2 = new ObjectDummyThatExtendsStdClass();
+        $o2->baz = 'baz';
+
+        $this->assertSame(['baz' => 'baz'], $this->normalizer->normalize($o2));
+    }
+
+    public function testNormalizeWithObjectFromStdClassAndIdenticalPropertyNameAndValue()
+    {
+        $propertyAccess = PropertyAccess::createPropertyAccessorBuilder();
+        $propertyAccess->disableExceptionOnInvalidPropertyPath();
+        $propertyAccess->disableExceptionOnInvalidIndex();
+        $this->normalizer = new ObjectNormalizer(null, null, $propertyAccess->getPropertyAccessor(), null, null, null, []);
+
+        $o2 = new ObjectDummyThatExtendsStdClass();
+        $o2->baz = 'baz';
+
+        $this->assertSame(['baz' => 'baz'], $this->normalizer->normalize($o2));
+    }
+
+    public function testNormalizeWithObjectExtendingStdClass()
+    {
+        $propertyAccess = PropertyAccess::createPropertyAccessorBuilder();
+        $propertyAccess->disableExceptionOnInvalidPropertyPath();
+        $propertyAccess->disableExceptionOnInvalidIndex();
+        $this->normalizer = new ObjectNormalizer(null, null, $propertyAccess->getPropertyAccessor(), null, null, null, []);
+
+        $o2 = new ObjectDummyWithPropertyThatExtendsStdClass();
+        $o2->baz = 'baz';
+        $o2->foo = 'bar';
+
+        $this->assertSame(['foo' => 'bar', 'baz' => 'baz',], $this->normalizer->normalize($o2));
+    }
+
+    public function testDenormalizeObjectForExtendingStdClass()
+    {
+        $data = [
+            'foo' => 'bar',
+            'oof' => 'rab',
+        ];
+
+        $obj = $this->normalizer->denormalize($data, ObjectDummyWithPropertyThatExtendsStdClass::class, 'any');
+
+        $expected = new ObjectDummyWithPropertyThatExtendsStdClass();
+        $expected->foo = 'bar';
+        $expected->oof = 'rab';
+
+        self::assertEquals($expected, $obj);
     }
 
     public function testConstructorWithObjectTypeHintDenormalize()
@@ -1245,3 +1340,13 @@ class ObjectDummyWithIgnoreAttributeAndPrivateProperty
 
     private $private = 'private';
 }
+
+class ObjectDummyThatExtendsStdClass extends \stdClass
+{
+}
+
+class ObjectDummyWithPropertyThatExtendsStdClass extends \stdClass
+{
+    public string $foo;
+}
+

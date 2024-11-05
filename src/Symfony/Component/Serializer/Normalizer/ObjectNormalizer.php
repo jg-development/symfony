@@ -64,7 +64,7 @@ final class ObjectNormalizer extends AbstractObjectNormalizer
 
     protected function extractAttributes(object $object, ?string $format = null, array $context = []): array
     {
-        if (\stdClass::class === $object::class) {
+        if ($object instanceof \stdClass) {
             return array_keys((array) $object);
         }
 
@@ -141,6 +141,12 @@ final class ObjectNormalizer extends AbstractObjectNormalizer
 
     protected function setAttributeValue(object $object, string $attribute, mixed $value, ?string $format = null, array $context = []): void
     {
+        if ($object instanceof \stdClass && !property_exists($object, $attribute)) {
+            $object->{$attribute} = $value;
+
+            return;
+        }
+
         try {
             $this->propertyAccessor->setValue($object, $attribute, $value);
         } catch (NoSuchPropertyException) {

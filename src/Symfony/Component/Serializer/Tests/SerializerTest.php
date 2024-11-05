@@ -515,6 +515,7 @@ class SerializerTest extends TestCase
     public function testDeserializeAndSerializeNestedAbstractAndInterfacedObjectsWithTheClassMetadataDiscriminator()
     {
         $example = new DummyMessageNumberThree();
+        $example->type = 'three';
 
         $serializer = $this->serializerWithClassDiscriminator();
 

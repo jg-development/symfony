@@ -270,7 +270,7 @@ abstract class AbstractObjectNormalizer extends AbstractNormalizer
             array_unshift($attributes, $mapping->getTypeProperty());
         }
 
-        if ($context['cache_key'] && \stdClass::class !== $class) {
+        if ($context['cache_key'] && \stdClass::class !== $class && !$object instanceof \stdClass) {
             $this->attributesCache[$key] = $attributes;
         }
 
@@ -347,7 +347,7 @@ abstract class AbstractObjectNormalizer extends AbstractNormalizer
 
             $attributeContext = $this->getAttributeDenormalizationContext($resolvedClass, $attribute, $context);
 
-            if ((false !== $allowedAttributes && !\in_array($attribute, $allowedAttributes, true)) || !$this->isAllowedAttribute($resolvedClass, $attribute, $format, $context)) {
+            if ((false !== $allowedAttributes && !\in_array($attribute, $allowedAttributes, true)) || !$this->isAllowedAttribute($resolvedClass, $attribute, $format, $context) && !($object instanceOf \stdClass)) {
                 if (!($context[self::ALLOW_EXTRA_ATTRIBUTES] ?? $this->defaultContext[self::ALLOW_EXTRA_ATTRIBUTES])) {
                     $extraAttributes[] = $attribute;
                 }
